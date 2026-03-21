@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>whatsapp bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #1f1f1f;
+    --green: #00e676;
+    --green-dim: #00e67620;
+    --text: #f0f0f0;
+    --muted: #555;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 20px;
+  }
+
+  .header {
+    text-align: center;
+  }
+
+  .header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  /* status badge */
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+
+  .dot.waiting { background: var(--muted); }
+  .dot.qr { background: #ffd740; animation: pulse-yellow 1.5s infinite; }
+  .dot.ready { background: var(--green); animation: pulse-green 2s infinite; }
+
+  @keyframes pulse-yellow {
+    0%, 100% { box-shadow: 0 0 0 0 #ffd74060; }
+    50% { box-shadow: 0 0 0 6px #ffd74000; }
+  }
+
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 #00e67660; }
+    50% { box-shadow: 0 0 0 6px #00e67600; }
+  }
+
+  /* qr area */
+  .qr-area {
+    width: 220px;
+    height: 220px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    background: #fff;
+  }
+
+  .qr-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: none;
+  }
+
+  .qr-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--muted);
+  }
+
+  .qr-placeholder svg {
+    opacity: 0.3;
+  }
+
+  .qr-placeholder span {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ready state */
+  .ready-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .ready-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--green-dim);
+    border: 1px solid var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ready-icon svg {
+    color: var(--green);
+  }
+
+  .ready-state h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--green);
+  }
+
+  .ready-state p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* instruction */
+  .instruction {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.6;
+    max-width: 240px;
+  }
+
+  /* scanning corner animation */
+  .qr-area::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      transparent 0%,
+      #00e67615 50%,
+      transparent 100%
+    );
+    background-size: 100% 30%;
+    animation: scan 2s linear infinite;
+    display: none;
+  }
+
+  .qr-area.scanning::after { display: block; }
+
+  @keyframes scan {
+    0% { background-position: 0 -30%; }
+    100% { background-position: 0 130%; }
+  }
+
+  /* backend url input */
+  .url-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .url-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .url-input:focus { border-color: var(--green); }
+  .url-input::placeholder { color: var(--muted); }
+
+  .connect-btn {
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+
+  .connect-btn:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>whatsapp bot</h1>
+    <p>scan to activate your bot</p>
+  </div>
+
+  <div class="card">
+    <div class="status">
+      <div class="dot waiting" id="dot"></div>
+      <span id="status-text">waiting</span>
+    </div>
+
+    <div class="url-row">
+      <input class="url-input" id="backend-url" placeholder="https://your-app.railway.app" />
+      <button class="connect-btn" onclick="connect()">connect</button>
+    </div>
+
+    <div class="qr-area" id="qr-area">
+      <div class="qr-placeholder" id="qr-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/>
+          <rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/>
+          <rect x="18" y="18" width="3" height="3"/>
+        </svg>
+        <span>waiting for qr</span>
+      </div>
+      <img id="qr-img" alt="qr code" />
+      <div class="ready-state" id="ready-state">
+        <div class="ready-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h2>bot is active</h2>
+        <p>monitoring your group<br>for keywords</p>
+      </div>
+    </div>
+
+    <p class="instruction" id="instruction">enter your railway backend url above and click connect</p>
+  </div>
+</div>
+
+<script>
+  let interval = null;
+  let backendUrl = '';
+
+  function connect() {
+    const input = document.getElementById('backend-url').value.trim().replace(/\/$/, '');
+    if (!input) return;
+    backendUrl = input;
+    if (interval) clearInterval(interval);
+    poll();
+    interval = setInterval(poll, 3000);
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch(`${backendUrl}/status`);
+      const data = await res.json();
+      updateUI(data);
+    } catch (e) {
+      setStatus('waiting', 'cannot reach backend');
+    }
+  }
+
+  function updateUI({ status, qr }) {
+    const dot = document.getElementById('dot');
+    const qrImg = document.getElementById('qr-img');
+    const qrPlaceholder = document.getElementById('qr-placeholder');
+    const qrArea = document.getElementById('qr-area');
+    const readyState = document.getElementById('ready-state');
+    const instruction = document.getElementById('instruction');
+
+    dot.className = `dot ${status}`;
+
+    if (status === 'qr' && qr) {
+      setStatus('qr', 'scan with whatsapp');
+      qrPlaceholder.style.display = 'none';
+      readyState.style.display = 'none';
+      qrImg.style.display = 'block';
+      qrImg.src = qr;
+      qrArea.classList.add('scanning');
+      qrArea.style.background = '#fff';
+      instruction.textContent = 'open whatsapp > linked devices > link a device';
+    } else if (status === 'ready') {
+      setStatus('ready', 'active');
+      qrPlaceholder.style.display = 'none';
+      qrImg.style.display = 'none';
+      qrArea.classList.remove('scanning');
+      qrArea.style.background = 'var(--surface)';
+      readyState.style.display = 'flex';
+      instruction.textContent = 'bot is running and monitoring your group';
+      if (interval) clearInterval(interval);
+    } else {
+      setStatus('waiting', 'waiting for bot');
+      qrPlaceholder.style.display = 'flex';
+      qrImg.style.display = 'none';
+      readyState.style.display = 'none';
+      qrArea.classList.remove('scanning');
+      qrArea.style.background = 'var(--surface)';
+      instruction.textContent = 'bot is starting up...';
+    }
+  }
+
+  function setStatus(type, text) {
+    document.getElementById('dot').className = `dot ${type}`;
+    document.getElementById('status-text').textContent = text;
+  }
+</script>
+</body>
+</html>
