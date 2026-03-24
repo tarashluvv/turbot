@@ -118,4 +118,5 @@ app.listen(PORT, () => {
     console.log(`Web server running on port ${PORT}`);
 });
 
+// Start WhatsApp client after server is listening
 client.initialize();
