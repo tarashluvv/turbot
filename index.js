@@ -43,6 +43,7 @@ client.on('message', async (msg) => {
     }
 });
 
+app.use(express.static('public'));
 app.get('/', async (req, res) => {
     if (isReady) {
         return res.send(`
